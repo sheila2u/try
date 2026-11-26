@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cipher Mystery</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:#fff;background:#101522}
+.screen{display:none;min-height:100vh;padding:25px;background-size:cover;background-position:center;background-color:#101522}
+.screen.active{display:block}.overlay{max-width:850px;margin:30px auto;padding:30px;background:rgba(0,0,0,.86);border-radius:16px}
+h1,h2{text-align:center}button,input,select{font-size:16px;padding:12px;border-radius:8px}
+button{cursor:pointer;border:0;background:#e5ad48;color:#171717;font-weight:bold;margin:6px}
+button:hover{background:#ffd477}button:focus,input:focus,select:focus{outline:3px solid #fff;outline-offset:3px}
+button:disabled{opacity:.45;cursor:not-allowed}.center{text-align:center}
+.stats{display:flex;justify-content:space-around;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.stat{background:#29344a;padding:12px 20px;border-radius:8px}.rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}
+.room-card,.question{background:#29344a;border:2px solid #68758d;padding:20px;border-radius:12px}
+.room-card{text-align:center}.option{display:block;margin:12px 0}.feedback{min-height:30px;margin-top:12px;font-weight:bold}
+.fragments{display:flex;justify-content:center;flex-wrap:wrap;gap:15px}.fragments img{width:45%;max-width:300px;border:2px solid white;border-radius:8px}
+input[type=text]{width:100%;max-width:250px;text-align:center}.progress{height:12px;background:#555;border-radius:10px;overflow:hidden}
+.progress span{display:block;height:100%;background:#e5ad48;width:100%}
+@media(max-width:600px){.overlay{padding:18px;margin:5px auto}.screen{padding:12px}}
+</style>
+</head>
+<body>
+<div id="start" class="screen active" style="background-image:linear-gradient(#0008,#000b),url('assets/cover.png')">
+<div class="overlay center"><h1>THE CIPHER MYSTERY</h1><p>A mysterious cryptographic manuscript has disappeared.</p><p>Explore the rooms, solve encrypted messages and recover the secret code before time runs out.</p><button onclick="showScreen('instructions')">START GAME</button></div></div>
+<div id="instructions" class="screen"><div class="overlay"><h1>MISSION INSTRUCTIONS</h1><p>You have 20 minutes and 100 life points.</p><ul><li>Complete Room 1 and Room 2 in either order.</li><li>Each incorrect answer deducts 10 life points.</li><li>Collect one document fragment from each room.</li><li>Combine both fragments to discover the four-digit code.</li><li>Enter the code to unlock Room 3.</li><li>Complete the final challenge to escape.</li></ul><p>Use the map to move between rooms. Optional hints are available.</p><button onclick="startGame()">CONTINUE TO MAP</button></div></div>
+<div id="map" class="screen"><div class="overlay"><h1>MUSEUM NAVIGATION MAP</h1><div class="stats"><div class="stat">Time: <span id="timer">20:00</span></div><div class="stat">Life: <span id="life">100</span></div><div class="stat">Fragments: <span id="fragmentCount">0/2</span></div></div><div class="progress" aria-label="Life points"><span id="lifeBar"></span></div>
+<div class="rooms"><div class="room-card"><h2>Room 1</h2><p>Encryption Laboratory</p><p id="room1status">Not completed</p><button onclick="openRoom(1)">ENTER ROOM 1</button></div><div class="room-card"><h2>Room 2</h2><p>Modular Arithmetic Chamber</p><p id="room2status">Not completed</p><button onclick="openRoom(2)">ENTER ROOM 2</button></div><div class="room-card"><h2>Room 3</h2><p>Final Cipher Vault</p><p id="room3status">LOCKED</p><button id="room3button" onclick="openRoom(3)" disabled>LOCKED</button></div></div>
+<div class="center"><h2>Collected Documents</h2><div class="fragments" id="mapFragments"><p>No fragments collected yet.</p></div><button onclick="showScreen('document')">RECONSTRUCT DOCUMENT</button><button onclick="toggleMusic()" id="audioButton">Mute / Unmute</button></div></div></div>
+<div id="room1" class="screen" style="background-image:linear-gradient(#0009,#000c),url('assets/room1.png')"><div class="overlay"><h1>ROOM 1: ENCRYPTION LABORATORY</h1><div id="room1questions"></div><button onclick="showScreen('map')">BACK TO MAP</button></div></div>
+<div id="room2" class="screen" style="background-image:linear-gradient(#0009,#000c),url('assets/room2.png')"><div class="overlay"><h1>ROOM 2: MODULAR ARITHMETIC CHAMBER</h1><div id="room2questions"></div><button onclick="showScreen('map')">BACK TO MAP</button></div></div>
+<div id="document" class="screen"><div class="overlay center"><h1>THE MISSING MANUSCRIPT</h1><p>Combine both fragments to reveal the secret code.</p><div class="fragments" id="documentFragments"></div><div id="codeArea" hidden><p id="clueText"></p><label for="codeInput">Enter the four-digit code:</label><br><br><input id="codeInput" type="text" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" autocomplete="off"><br><button onclick="checkCode()">UNLOCK ROOM 3</button></div><p id="documentMessage" role="status"></p><button onclick="showScreen('map')">BACK TO MAP</button></div></div>
+<div id="room3" class="screen" style="background-image:linear-gradient(#0009,#000c),url('assets/room3.png')"><div class="overlay"><h1>ROOM 3: FINAL CIPHER VAULT</h1><div id="room3questions"></div><button onclick="showScreen('map')">BACK TO MAP</button></div></div>
+<div id="completion" class="screen"><div class="overlay center"><h1>CONGRATULATIONS!</h1><h2>You Escaped the Cipher Museum!</h2><p id="finalStats"></p><button onclick="restartGame()">PLAY AGAIN</button></div></div>
+<div id="gameover" class="screen"><div class="overlay center"><h1>GAME OVER</h1><p>Your time or life points have run out.</p><button onclick="restartGame()">RESTART</button></div></div>
+<audio id="music" src="assets/background_music.mp3" loop></audio><audio id="correct" src="assets/correct.mp3"></audio><audio id="incorrect" src="assets/incorrect.mp3"></audio><audio id="found" src="assets/document_found.mp3"></audio><audio id="unlock" src="assets/door_unlock.mp3"></audio>
+<script>
+/* Replace this placeholder with the actual four-digit code shown in your supplied fragments. */
+const SECRET_CODE="1234";
+/* Example questions only: replace with your educator-approved Question Blueprint. */
+const questions={
+1:[
+{text:"What is plaintext?",options:["The original readable message","The encrypted message","The encryption key","The encryption algorithm"],answer:0,feedback:"Plaintext is the original readable message before encryption.",hint:"Think about the message before encryption."},
+{text:"Using a Caesar cipher with a shift of 3, encrypt CAT.",type:"text",answer:"FDW",feedback:"C becomes F, A becomes D and T becomes W.",hint:"Move each letter three positions forward."}],
+2:[
+{text:"What is 17 mod 5?",options:["1","2","3","4"],answer:1,feedback:"17 divided by 5 leaves a remainder of 2.",hint:"Find the remainder after division."},
+{text:"In a Caesar cipher with a shift of 3, decrypt KHOOR.",type:"text",answer:"HELLO",feedback:"Move every letter three positions backwards.",hint:"Reverse the encryption shift."}],
+3:[{text:"Match each cryptographic term with its meaning.",type:"matching",pairs:[["Plaintext","Original readable message"],["Ciphertext","Encrypted message"],["Encryption","Converting plaintext into ciphertext"],["Decryption","Recovering plaintext from ciphertext"]],feedback:"Correct! These are four fundamental cryptographic concepts."}]
+};
+let life=100,timeLeft=1200,timerInterval=null,completed={1:false,2:false,3:false},collected={1:false,2:false},answered={},unlocked=false,muted=false,gameStarted=false;
+function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");}
+function playSound(id){if(muted)return;const a=document.getElementById(id);a.currentTime=0;a.play().catch(()=>{});}
+function toggleMusic(){muted=!muted;const a=document.getElementById("music");if(muted)a.pause();else if(gameStarted)a.play().catch(()=>{});document.getElementById("audioButton").textContent=muted?"Unmute":"Mute";}
+function startGame(){gameStarted=true;document.getElementById("music").play().catch(()=>{});if(!timerInterval)startTimer();showScreen("map");updateStatus();}
+function startTimer(){clearInterval(timerInterval);timerInterval=setInterval(()=>{if(!gameStarted)return;timeLeft--;updateStatus();if(timeLeft<=0)endGame();},1000);}
+function updateStatus(){document.getElementById("timer").textContent=String(Math.floor(timeLeft/60)).padStart(2,"0")+":"+String(timeLeft%60).padStart(2,"0");document.getElementById("life").textContent=life;document.getElementById("lifeBar").style.width=Math.max(0,life)+"%";document.getElementById("fragmentCount").textContent=(Number(collected[1])+Number(collected[2]))+"/2";[1,2].forEach(n=>document.getElementById("room"+n+"status").textContent=completed[n]?"COMPLETED ✓":"Not completed");document.getElementById("room3status").textContent=unlocked?(completed[3]?"COMPLETED ✓":"UNLOCKED"):"LOCKED";document.getElementById("room3button").disabled=!unlocked;document.getElementById("room3button").textContent=unlocked?"ENTER ROOM 3":"LOCKED";renderFragments();}
+function openRoom(n){if(n===3&&!unlocked)return;showScreen("room"+n);renderQuestions(n);}
+function renderQuestions(n){const c=document.getElementById("room"+n+"questions");c.innerHTML="";questions[n].forEach((q,i)=>{const key=n+"-"+i,d=document.createElement("div");d.className="question";const h=document.createElement("h3");h.textContent="Challenge "+(i+1);d.append(h);const p=document.createElement("p");p.textContent=q.text;d.append(p);
+if(answered[key]){const f=document.createElement("p");f.textContent="✓ "+q.feedback;d.append(f);}
+else if(q.type==="text"){const inp=document.createElement("input");inp.type="text";inp.id="answer-"+key;inp.setAttribute("aria-label","Your answer");d.append(inp);const b=document.createElement("button");b.textContent="SUBMIT";b.onclick=()=>checkAnswer(n,i,inp.value);d.append(b);}
+else if(q.type==="matching"){q.pairs.forEach((pair,j)=>{const label=document.createElement("label");label.className="option";label.textContent=pair[0]+" — ";const sel=document.createElement("select");sel.id="match-"+key+"-"+j;const ph=document.createElement("option");ph.value="";ph.textContent="Select meaning";sel.append(ph);q.pairs.forEach(x=>{const o=document.createElement("option");o.value=x[1];o.textContent=x[1];sel.append(o);});label.append(sel);d.append(label);});const b=document.createElement("button");b.textContent="SUBMIT MATCHING";b.onclick=()=>checkAnswer(n,i,q.pairs.map((p,j)=>document.getElementById("match-"+key+"-"+j).value));d.append(b);}
+else{q.options.forEach((o,j)=>{const label=document.createElement("label");label.className="option";const r=document.createElement("input");r.type="radio";r.name="answer-"+key;r.value=j;label.append(r," "+o);d.append(label);});const b=document.createElement("button");b.textContent="SUBMIT";b.onclick=()=>{const s=document.querySelector('input[name="answer-'+key+'"]:checked');checkAnswer(n,i,s?Number(s.value):null);};d.append(b);}
+const hint=document.createElement("button");hint.textContent="SHOW HINT";hint.onclick=()=>alert(q.hint||"Review the concepts from this room.");d.append(hint);const fb=document.createElement("p");fb.id="feedback-"+key;fb.className="feedback";fb.setAttribute("role","status");d.append(fb);c.append(d);});if(questions[n].every((q,i)=>answered[n+"-"+i])&&!completed[n])completeRoom(n);}
+function checkAnswer(n,i,value){const q=questions[n][i],key=n+"-"+i;if(value===null||value===""){alert("Please enter an answer.");return;}let ok=q.type==="text"?String(value).trim().toUpperCase()===String(q.answer).toUpperCase():q.type==="matching"?q.pairs.every((p,j)=>value[j]===p[1]):value===q.answer;const fb=document.getElementById("feedback-"+key);if(ok){answered[key]=true;fb.textContent="✓ Correct! "+q.feedback;fb.style.color="#8cf5a1";playSound("correct");renderQuestions(n);}else{life-=10;fb.textContent="Incorrect. 10 life points deducted. Try again.";fb.style.color="#ff9b9b";playSound("incorrect");updateStatus();if(life<=0)endGame();}}
+function completeRoom(n){completed[n]=true;if(n===1||n===2){if(!collected[n]){collected[n]=true;playSound("found");}}updateStatus();if(n===3){clearInterval(timerInterval);document.getElementById("finalStats").textContent="Remaining life points: "+life;showScreen("completion");}else{alert("Room completed! You collected document fragment "+n+".");showScreen("map");}}
+function renderFragments(){const map=document.getElementById("mapFragments"),doc=document.getElementById("documentFragments");map.innerHTML="";doc.innerHTML="";[1,2].forEach(n=>{if(collected[n])[map,doc].forEach(c=>{const img=document.createElement("img");img.src="assets/fragment"+n+".png";img.alt="Collected document fragment "+n;c.append(img);});});if(!collected[1]&&!collected[2])map.textContent="No fragments collected yet.";const both=collected[1]&&collected[2];document.getElementById("codeArea").hidden=!both;document.getElementById("documentMessage").textContent=both?"Both fragments collected. Enter the four-digit code shown by the reconstructed clue.":"Collect both document fragments to enable code entry.";document.getElementById("clueText").textContent=both?"Read the four-digit access code from the two document fragments.":"";}
+function checkCode(){if(!(collected[1]&&collected[2]))return;const v=document.getElementById("codeInput").value.trim();if(!/^\d{4}$/.test(v)){alert("Enter exactly four digits.");return;}if(v===SECRET_CODE){unlocked=true;playSound("unlock");updateStatus();alert("Correct code! Room 3 is unlocked.");showScreen("map");}else{life-=10;playSound("incorrect");updateStatus();document.getElementById("documentMessage").textContent="Incorrect code. 10 life points deducted.";if(life<=0)endGame();}}
+function endGame(){clearInterval(timerInterval);document.getElementById("music").pause();showScreen("gameover");}
+function restartGame(){clearInterval(timerInterval);life=100;timeLeft=1200;completed={1:false,2:false,3:false};collected={1:false,2:false};answered={};unlocked=false;gameStarted=false;document.getElementById("codeInput").value="";document.getElementById("music").pause();document.getElementById("music").currentTime=0;updateStatus();showScreen("start");}
+updateStatus();
+</script>
+</body>
+</html>
